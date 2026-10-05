@@ -1,0 +1,531 @@
+/* ==========================================================================
+   CogniDiff design system
+   Deep navy field, drifting starfield, cyan neural accents, monospace HUD.
+   Shared by the landing page, the dashboard, the mini-tasks and the doctor
+   report so the whole product reads as one instrument.
+   ========================================================================== */
+
+/* ==========================================================================
+   fonts, self-hosted
+   Poppins for display and body: geometric, single-storey g, circular dots,
+   which is the face the reference scan uses. JetBrains Mono for the HUD.
+   Vendored rather than loaded from a CDN, so there is no third-party host in
+   the request path and the app works offline.
+   ========================================================================== */
+
+@font-face {
+  font-family: "Inter"; font-style: normal; font-weight: 400;
+  font-display: swap; src: url("../vendor/fonts/Inter-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter"; font-style: normal; font-weight: 500;
+  font-display: swap; src: url("../vendor/fonts/Inter-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter"; font-style: normal; font-weight: 600;
+  font-display: swap; src: url("../vendor/fonts/Inter-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter"; font-style: normal; font-weight: 700;
+  font-display: swap; src: url("../vendor/fonts/Inter-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter"; font-style: normal; font-weight: 800;
+  font-display: swap; src: url("../vendor/fonts/Inter-800.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono"; font-style: normal; font-weight: 400;
+  font-display: swap; src: url("../vendor/fonts/JetBrainsMono-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono"; font-style: normal; font-weight: 500;
+  font-display: swap; src: url("../vendor/fonts/JetBrainsMono-500.woff2") format("woff2");
+}
+
+:root {
+  /* --- field ------------------------------------------------------------ */
+  --bg-deep:    #04091c;
+  --bg-mid:     #071331;
+  --bg-high:    #0b2050;
+  --glow-blue:  #1a4fd0;
+  --glow-cyan:  #38bdf8;
+
+  /* --- surfaces --------------------------------------------------------- */
+  --panel:      rgba(12, 30, 68, .42);
+  --panel-solid:rgba(7, 17, 42, .92);
+  --line:       rgba(127, 216, 255, .14);
+  --line-hot:   rgba(127, 216, 255, .40);
+
+  /* --- ink ---------------------------------------------------------------
+     Every one of these is contrast-checked against the panel background at
+     4.5:1 or better (docs/accessibility_test.md). The first pass used dimmer
+     blues that looked right and measured 3.1:1 — comfortably illegible for
+     anyone with reduced contrast sensitivity, which in a tool aimed partly at
+     older users is precisely the wrong group to lose. */
+  --text:       #eaf4ff;   /* ~14:1 */
+  --text-dim:   #aabfda;   /* ~9.2:1 */
+  --muted:      #93a9c8;   /* ~7.5:1 */
+  --faint:      #7589ad;   /* ~5.1:1 — the dimmest tone used for real text */
+
+  /* --- accents ---------------------------------------------------------- */
+  --cyan:       #7fd8ff;
+  --cyan-hot:   #38bdf8;
+  --green:      #5ce6b5;
+  --yellow:     #ffd166;
+  --orange:     #ff9f5a;
+  --red:        #ff7a8a;
+  --violet:     #a78bfa;
+
+  /* --- type ------------------------------------------------------------- */
+  --mono: "JetBrains Mono", "Cascadia Mono", "SF Mono", Consolas, ui-monospace, monospace;
+  --sans: "Inter", "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  --step: clamp(11px, .78vw, 13px);
+  --radius: 12px;
+  --maxw: 1240px;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--sans);
+  font-size: 16px;                 /* health tool — never below 16px body */
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg-deep);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* The galaxy field. Two coloured glows over a vertical gradient, exactly the
+   deep-navy-with-a-blue-bloom look of the reference scan. */
+/* The reference field is a lit navy, not near-black: a broad blue body with a
+   hard bright corner glow at the top left, and enough base luminance that the
+   stars sit in something rather than on nothing. The first version was far too
+   dark, which is why the scan looked like it was floating in a void. */
+.cosmos {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(50% 45% at 50% 48%, rgba(14, 116, 244, 0.18), transparent 70%),
+    radial-gradient(45% 35% at 5% 2%, rgba(56, 189, 248, 0.20), transparent 65%),
+    radial-gradient(65% 55% at 85% 95%, rgba(29, 78, 216, 0.22), transparent 65%),
+    radial-gradient(110% 90% at 50% 40%, rgba(7, 24, 68, 0.40), transparent 75%),
+    linear-gradient(180deg, #030712 0%, #04091c 50%, #020617 100%);
+}
+
+/* Starfield canvas sits above the gradient, below all content. */
+/* A canvas is a replaced element: `inset: 0` alone does NOT stretch it, because
+   `width: auto` resolves to its intrinsic 300x150. Without these two lines the
+   whole starfield renders in a small box in the top-left corner. */
+#starfield {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   cursor
+   ========================================================================== */
+
+/* Light, not a ring. The first version drew an outlined circle chasing the
+   pointer, which reads as a widget stuck to the screen. What the reference does
+   is carry a soft source of light: nothing is outlined, the area around the
+   pointer is simply brighter, and the brightness lifts over anything you can
+   act on. */
+
+.cursor-beam, .cursor-core {
+  display: none !important;
+}
+.cursor-beam.is-on { opacity: 1; }
+.cursor-core.is-on { opacity: 1; }
+
+/* the broad wash */
+.cursor-beam {
+  width: 460px; height: 460px;
+  background: radial-gradient(circle,
+    rgba(120, 205, 255, .13) 0%,
+    rgba(70, 165, 245, .075) 26%,
+    rgba(40, 110, 220, .035) 48%,
+    rgba(26, 79, 208, .012) 66%,
+    transparent 78%);
+  filter: blur(6px);
+}
+.cursor-beam.is-hot {
+  width: 560px; height: 560px;
+  background: radial-gradient(circle,
+    rgba(150, 225, 255, .21) 0%,
+    rgba(80, 180, 250, .12) 26%,
+    rgba(40, 110, 220, .05) 48%,
+    transparent 78%);
+}
+
+/* the small bright heart of it, so the light has a source */
+.cursor-core {
+  width: 90px; height: 90px;
+  background: radial-gradient(circle,
+    rgba(210, 245, 255, .30) 0%,
+    rgba(140, 215, 255, .16) 30%,
+    transparent 68%);
+  filter: blur(3px);
+}
+.cursor-core.is-hot {
+  width: 130px; height: 130px;
+  background: radial-gradient(circle,
+    rgba(235, 252, 255, .46) 0%,
+    rgba(160, 225, 255, .24) 32%,
+    transparent 70%);
+}
+
+@media (pointer: coarse) {
+  .cursor-beam, .cursor-core { display: none; }
+}
+
+/* Never print the cursor. It was landing in saved PDFs as a stray blob over
+   the report content. */
+@media print {
+  .cursor-beam, .cursor-core { display: none !important; }
+}
+
+/* ==========================================================================
+   accessibility primitives
+   ========================================================================== */
+
+/* The `hidden` attribute is only a UA default of `display:none`, so any class
+   rule that sets `display` silently defeats it. Toggling visibility is too
+   important to lose to specificity. */
+[hidden] { display: none !important; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.skip-link {
+  position: absolute; top: -100px; left: 12px; z-index: 999;
+  padding: 12px 18px; border-radius: 8px;
+  background: var(--cyan); color: #04091c;
+  font-family: var(--mono); font-size: 13px; font-weight: 600;
+  text-decoration: none;
+}
+.skip-link:focus { top: 12px; }
+
+:focus-visible {
+  outline: 2px solid var(--cyan-hot);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ==========================================================================
+   HUD typography
+   ========================================================================== */
+
+.tag {
+  display: inline-flex; align-items: center; gap: .55em;
+  font-family: var(--mono);
+  font-size: var(--step);
+  font-weight: 500;
+  letter-spacing: .34em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+.tag::before { content: ">"; opacity: .55; letter-spacing: 0; }
+.tag::after {
+  content: "_";
+  opacity: .5;
+  animation: blink 1.15s steps(2, start) infinite;
+}
+@keyframes blink { 0%, 50% { opacity: .5 } 51%, 100% { opacity: 0 } }
+
+/* Poppins runs wide and light for its weight, so headings take 700 and tighter
+   tracking to sit like the reference. */
+h1, h2, h3 {
+  margin: 0; font-weight: 700;
+  letter-spacing: -.033em; line-height: 1.05;
+  font-feature-settings: "cv05" 1, "cv08" 1;   /* single-storey g, as the reference uses */
+}
+
+.display {
+  font-size: clamp(2.05rem, 5vw, 3.85rem);
+  max-width: 15ch;
+  text-wrap: balance;
+}
+
+.lede {
+  margin: 1.35rem 0 0;
+  max-width: 46ch;
+  font-size: clamp(.95rem, 1.15vw, 1.06rem);
+  line-height: 1.72;
+  color: var(--text-dim);
+}
+
+.hdr {
+  margin: 0 0 1rem;
+  font-family: var(--mono);
+  font-size: var(--step);
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.hdr b { color: var(--cyan); font-weight: 500; }
+
+/* telemetry row — the bottom metadata strip */
+.telemetry {
+  display: flex; flex-wrap: wrap; gap: 1.6rem 2.4rem;
+  margin: 2.4rem 0 0; padding: 0;
+  list-style: none;
+}
+.telemetry > li {
+  position: relative;
+  padding-left: 1rem;
+  font-family: var(--mono);
+  font-size: var(--step);
+  letter-spacing: .17em;
+  text-transform: uppercase;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.telemetry > li::before {
+  content: "\2022";
+  position: absolute; left: 0; top: 0;
+  color: var(--cyan); opacity: .65;
+}
+.telemetry b {
+  margin-left: .55em;
+  color: var(--cyan);
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   panels + terminal cards
+   ========================================================================== */
+
+.panel {
+  padding: 1.5rem 1.65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  backdrop-filter: blur(9px);
+}
+
+.terminal {
+  max-width: 560px;
+  margin-inline: auto;
+  text-align: left;
+  border: 1px solid var(--line-hot);
+  border-radius: var(--radius);
+  background: rgba(6, 14, 36, .74);
+  backdrop-filter: blur(11px);
+  box-shadow: 0 30px 90px -40px rgba(0, 0, 0, .9),
+              0 0 60px -30px rgba(56, 189, 248, .5);
+  overflow: hidden;
+}
+.terminal__bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: .78rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono); font-size: var(--step);
+  letter-spacing: .24em; text-transform: uppercase;
+  color: var(--muted);
+}
+.terminal__dots { display: inline-flex; gap: 5px; margin-right: .7rem; }
+.terminal__dots i {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--faint);
+}
+.terminal__live {
+  display: inline-flex; align-items: center; gap: .5em;
+  color: var(--cyan);
+}
+.terminal__live::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 9px 1px var(--cyan);
+  animation: livepulse 1.9s ease-in-out infinite;
+}
+@keyframes livepulse { 0%, 100% { opacity: 1 } 50% { opacity: .28 } }
+
+.terminal__body { padding: 1.15rem 1.15rem .5rem; }
+.terminal__line {
+  position: relative;
+  padding-left: 1.35rem;
+  margin: 0 0 1rem;
+  font-size: .93rem; line-height: 1.68;
+  color: var(--text-dim);
+}
+.terminal__line::before {
+  content: ">";
+  position: absolute; left: 0; top: 0;
+  font-family: var(--mono); color: var(--cyan); opacity: .7;
+}
+.terminal__rows { margin: 0; padding: 0 0 .35rem; list-style: none; }
+.terminal__rows li {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+  padding: .48rem 0;
+  border-top: 1px solid rgba(127, 216, 255, .08);
+  font-family: var(--mono); font-size: var(--step);
+  letter-spacing: .17em; text-transform: uppercase;
+}
+.terminal__rows dt, .terminal__rows .k { color: var(--faint); }
+.terminal__rows dd, .terminal__rows .v { margin: 0; color: var(--cyan); }
+.terminal__prompt {
+  padding: .7rem 1.15rem 1rem;
+  font-family: var(--mono); font-size: var(--step);
+  color: var(--muted);
+}
+.terminal__prompt::after {
+  content: "_";
+  animation: blink 1.15s steps(2, start) infinite;
+}
+
+/* ==========================================================================
+   chrome — fixed HUD furniture
+   ========================================================================== */
+
+.hud-close, .hud-mark {
+  position: fixed; z-index: 40;
+  display: grid; place-items: center;
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(6, 14, 36, .8);
+  backdrop-filter: blur(8px);
+  color: var(--text-dim);
+  font-family: var(--mono); font-size: 15px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color .2s, border-color .2s, background .2s, transform .2s;
+}
+.hud-close { top: 22px; right: 24px; }
+.hud-mark  { bottom: 22px; left: 24px; font-size: 13px; letter-spacing: .05em; }
+.hud-close:hover, .hud-mark:hover {
+  color: var(--cyan); border-color: var(--line-hot);
+  background: rgba(26, 79, 208, .3);
+}
+
+
+/* ==========================================================================
+   buttons, badges, links
+   ========================================================================== */
+
+.btn {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center; gap: .6em;
+  padding: .82rem 1.5rem;
+  border: 1px solid var(--line-hot);
+  border-radius: 999px;
+  background: rgba(26, 79, 208, .22);
+  color: var(--text);
+  font-family: var(--mono); font-size: 12px;
+  letter-spacing: .18em; text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 0 0 0 rgba(56, 189, 248, 0),
+              0 6px 22px -14px rgba(0, 0, 0, .9);
+  transition: background .22s, border-color .22s, color .22s,
+              transform .12s, box-shadow .32s;
+}
+
+/* The glow: a soft cyan bloom outside the pill plus a sheen that sweeps across
+   it on hover. */
+.btn::before {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(115deg,
+    transparent 20%, rgba(168, 230, 255, .28) 48%, transparent 76%);
+  transform: translateX(-130%);
+  transition: transform .62s cubic-bezier(.22, .8, .3, 1);
+  pointer-events: none;
+}
+.btn:hover::before, .btn:focus-visible::before { transform: translateX(130%); }
+
+.btn:hover {
+  background: rgba(56, 189, 248, .3);
+  border-color: var(--cyan);
+  color: #fff;
+  box-shadow: 0 0 26px -4px rgba(56, 189, 248, .55),
+              0 0 60px -18px rgba(56, 189, 248, .5),
+              0 6px 22px -14px rgba(0, 0, 0, .9);
+}
+.btn:active { transform: translateY(1px); }
+.btn--ghost { background: transparent; border-color: var(--line); }
+.btn--ghost:hover { background: rgba(26, 79, 208, .22); }
+.btn--solid {
+  background: var(--cyan); border-color: var(--cyan);
+  color: #04091c; font-weight: 600;
+  box-shadow: 0 0 22px -6px rgba(127, 216, 255, .7),
+              0 6px 22px -14px rgba(0, 0, 0, .9);
+}
+.btn--solid:hover {
+  background: #a8e6ff; border-color: #a8e6ff; color: #04091c;
+  box-shadow: 0 0 34px -2px rgba(127, 216, 255, .85),
+              0 0 74px -16px rgba(56, 189, 248, .6);
+}
+.btn--danger { color: var(--red); border-color: rgba(255, 122, 138, .38); background: transparent; }
+.btn--danger:hover { background: rgba(255, 122, 138, .16); border-color: var(--red); color: #fff; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: .5em;
+  padding: .34rem .8rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: .16em; text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.badge__dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+
+/* Alert states always carry colour PLUS a text label PLUS an icon glyph.
+   A red circle alone is meaningless to a colourblind user and invisible to a
+   screen reader, so colour is never the only channel. */
+.badge--green  { color: var(--green);  border-color: rgba(92, 230, 181, .4); }
+.badge--yellow { color: var(--yellow); border-color: rgba(255, 209, 102, .4); }
+.badge--orange { color: var(--orange); border-color: rgba(255, 159, 90, .4); }
+.badge--red    { color: var(--red);    border-color: rgba(255, 122, 138, .45); }
+.badge--blue   { color: var(--cyan);   border-color: var(--line-hot); }
+.badge--grey   { color: var(--muted);  border-color: var(--line); }
+
+a { color: var(--cyan); }
+
+/* ==========================================================================
+   layout helpers
+   ========================================================================== */
+
+.shell { width: min(100% - 3rem, var(--maxw)); margin-inline: auto; }
+
+.grid { display: grid; gap: 1.15rem; }
+.grid--2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.grid--3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+.stack > * + * { margin-top: 1.15rem; }
+
+.scroll-x { overflow-x: auto; }
+
+@media (max-width: 640px) {
+  .shell { width: calc(100% - 1.6rem); }
+  .hud-close { top: 14px; right: 14px; width: 38px; height: 38px; }
+  .hud-mark { bottom: 68px; left: 14px; width: 38px; height: 38px; }
+  .telemetry { gap: .9rem 1.4rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
